@@ -171,6 +171,8 @@ new_timeseries = farm.normalize_range( new_timeseries );
 dF = 0.1; % Hz
 dT = 0.1; % s
 
+ 
+
 for W = 2%[1 2 4 8 16]
     
     % Prepare TFA
@@ -207,6 +209,8 @@ for W = 2%[1 2 4 8 16]
     rangeF = 1; % Hz
     clear h
     
+    %%
+    
     for chan = 1 : length(data_TFA.label)
         
         powspctrm = squeeze( TFRhann.powspctrm(chan,:,:) );
@@ -242,16 +246,16 @@ for W = 2%[1 2 4 8 16]
         farm_save_regressor( data, reginfo, ['logpower_' TFRhann.label{chan}] )
         
         % log modulator (unconvolved)
-        log_selected_power_TR      = log_selected_power(1 : round(data.sequence.TR*1/dT) : end);
-        log_selected_power_TR_diff = [0 diff(log_selected_power_TR)]; % first derivative
+        selected_power_TR      = selected_power(1 : round(data.sequence.TR*1/dT) : end);
+        selected_power_TR_diff = [0 diff(selected_power_TR)]; % first derivative
         reginfo_ = reginfo;
-        reginfo_. reg = log_selected_power_TR     ;
-        reginfo_.dreg = log_selected_power_TR_diff;
+        reginfo_. reg = selected_power_TR     ;
+        reginfo_.dreg = selected_power_TR_diff;
         farm_save_regressor( data, reginfo_, ['modulator_' TFRhann.label{chan}] )
         
         figure(W)
         hold on
-        plot(reginfo.reg)
+        plot(reginfo_.reg)
         
     end
     
@@ -262,7 +266,7 @@ for W = 2%[1 2 4 8 16]
 %     set(gcf,'name','selected_power')
 %     legend(TFRhann.label)
     figure(W)
-    set(gcf,'name','log_selected_power')
+    set(gcf,'name','selected_power')
     legend(TFRhann.label)
     
 end
