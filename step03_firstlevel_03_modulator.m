@@ -8,7 +8,7 @@ load e.mat
 
 dirFonc = e.getSerie('run_nm').toJob;
 e.getSerie('run_nm').addStim('onsets','.mat','stim',1)
-
+e.getSerie('run_nm').addVolume('mask.nii','mask',1)
 stim = e.getSerie('run_nm').getStim('stim').load; stim = stim{1};
 
 par.rp       = 1;
@@ -48,8 +48,8 @@ for l = 1 : length(list)
     e.getSerie('run_nm').addStim('electrophy',['^' list{l} '.mat'],list{l},1)
     emg = e.getSerie('run_nm').getStim(list{l}).load; emg = emg{1};
     
-    hold on
-    plot(emg.R(:,1))
+%     hold on
+%     plot(emg.R(:,1))
     
     bin = false(1,size(emg.R,1));
     bin(round(new_onset)) = 1;
@@ -87,7 +87,7 @@ for l = 1 : length(list)
     
 end
 
-legend(list)
+% legend(list)
 
 % return
 
@@ -97,9 +97,13 @@ legend(list)
 par.sge     = 1;
 par.run     = 0;
 par.display = 0;
+par.mask_thr = 0.1;
 par.jobname  = 'spm_glm_def';
 par.rp_regex = 'multiple_regressors.txt';
+mask = e.getSerie('run_nm').getVolume('mask').toJob;
+par.mask = repmat(mask,size(list));
 dirStats = r_mkdir( fullfile( e.getPath, 'model') ,  list );
+
 job_first_level_specify( repmat(dirFonc,size(list)), dirStats, onsets,par);
 
 return

@@ -22,6 +22,7 @@ dirStats_2 = e.mkdir('model',model_name{2});
 dirFonc = e.getSerie('run_nm').toJob;
 e.getSerie('run_nm').addStim('onsets','.mat','stim',1)
 onsetFile = e.getSerie('run_nm').getStim('stim').toJob;
+e.getSerie('run_nm').addVolume('mask.nii','mask',1)
 
 par.rp       = 1;
 par.file_reg = '^sw.*nii';
@@ -33,6 +34,8 @@ par.redo    = 0;
 par.sge     = 0;
 par.run     = 0;
 par.display = 0;
+par.mask_thr = 0.1;
+par.mask = e.getSerie('run_nm').getVolume('mask').toJob;
 
 % Boxcar + 6rp (classic)
 par.rp_regex = '^rp.*txt';

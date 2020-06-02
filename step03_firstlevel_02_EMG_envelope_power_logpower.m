@@ -7,7 +7,7 @@ load e.mat
 %% Prepare paths and regexp
 
 par.display = 0;
-par.run     = 1;
+par.run     = 0;
 par.pct     = 0;
 par.verbose = 2;
 
@@ -17,9 +17,11 @@ par.verbose = 2;
 dirFonc = e.getSerie('run_nm').toJob;
 e.getSerie('run_nm').addStim('onsets','.mat','stim',1)
 onsetFile = e.getSerie('run_nm').getStim('stim').toJob;
+e.getSerie('run_nm').addVolume('mask.nii','mask',1)
 
 par.rp       = 1;
 par.file_reg = '^sw.*nii';
+par.mask_thr = 0.1;
 
 
 %% Specify user regressors
@@ -64,6 +66,8 @@ jobs = cell(0);
 j = 0;
 for l = 1 : length(list)
     j = j + 1;
+    
+    par.mask = e.getSerie('run_nm').getVolume('mask').toJob;
     
     % FARM + 6rp (classic)
     par.rp_regex = '^rp.*txt';
