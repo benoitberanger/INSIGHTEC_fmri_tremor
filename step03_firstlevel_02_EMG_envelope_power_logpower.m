@@ -73,14 +73,14 @@ for l = 1 : length(list)
     par.rp_regex = '^rp.*txt';
     par.file_regressor = e.getSerie('run_nm').getStim(list{l}).toJob(1);
     dirStats = e.mkdir('model',['classic_' list{l}]);
-    jobtmp = job_first_level_specify(dirFonc,dirStats,repmat({''},size(e)),par);
+    jobtmp = job_first_level_specify(dirFonc,dirStats,repmat(onsetFile,size(e)),par);
     jobs = [jobs jobtmp];
     
     % FARM + TAPAS
     par.rp_regex = 'multiple_regressors.txt';
     par.file_regressor = e.getSerie('run_nm').getStim(list{l}).toJob(1);
     dirStats = e.mkdir('model',['tapas_' list{l}]);
-    jobtmp = job_first_level_specify(dirFonc,dirStats,repmat({''},size(e)),par);
+    jobtmp = job_first_level_specify(dirFonc,dirStats,repmat(onsetFile,size(e)),par);
     jobs = [jobs jobtmp];
     
 end
@@ -114,27 +114,61 @@ job_first_level_estimate(fspm,par);
 
 %% Contrast
 
-reg  = [1 0];
-dreg = [0 1];
+Instructions = [1 0 0 0   0 0];
+Relax        = [0 1 0 0   0 0];
+Posture      = [0 0 1 0   0 0];
+EndText      = [0 0 0 1   0 0];
+reg          = [0 0 0 0   1 0];
+dreg         = [0 0 0 0   0 1];
 
 contrast_T.values = {
     
+Instructions
+Relax
+Posture
+EndText
 reg
 dreg
+
+Posture-Relax
 
 }';
 
 contrast_T.names = {
     
+'Instructions'
+'Relax'
+'Posture'
+'EndText'
 'reg'
 'dreg'
 
+'Posture-Relax'
+
 }';
+
+% reg  = [1 0];
+% dreg = [0 1];
+% 
+% contrast_T.values = {
+%     
+% reg
+% dreg
+% 
+% }';
+% 
+% contrast_T.names = {
+%     
+% 'reg'
+% 'dreg'
+% 
+% }';
 
 contrast_T.types = cat(1,repmat({'T'},[1 length(contrast_T.names)]));
 
 contrast_F.names  = {'F-all'};
-contrast_F.values = {eye(2)};
+% contrast_F.values = {eye(2)};
+contrast_F.values = {eye(6)};
 contrast_F.types  = cat(1,repmat({'F'},[1 length(contrast_F.names)]));
 
 contrast.names  = [contrast_F.names  contrast_T.names ];
