@@ -3,7 +3,7 @@ clc
 
 load e.mat
 
-model = e.getModel(cellstr2regex({'tapas_logpower','modulator'})).getPath';
+model = e.getModel(cellstr2regex({'tapas_power','tapas_logpower','modulator'})).getPath';
 
 anat = e.getSerie('anat_T1_UNI').getVolume('^wmcs').getPath;
 anat = repmat(anat,size(model));

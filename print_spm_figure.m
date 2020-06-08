@@ -3,6 +3,7 @@ function print_spm_figure( varargin )
 
 if nargin==0, help(mfilename('fullpath')); return; end
 
+
 %% Check inputs
 
 % Init
@@ -11,11 +12,11 @@ parser = inputParser;
 
 % Set possible paramters
 %-----------------------
-parser.addParameter(      'model',     [], @(x) is_notempty_cellstr         (x) )
-parser.addParameter(       'anat',     [], @(x) is_notempty_cellstr         (x) )
+parser.addParameter(      'model',     [], @(x) is_model                    (x) )
+parser.addParameter(       'anat',     [], @(x) is_anat                     (x) )
 parser.addParameter(      'coord',     [], @(x) is_coord                    (x) )
 parser.addParameter(   'contrast',     [], @(x) is_notempty_cellstr         (x) )
-parser.addParameter( 'correction', 'none', @(x) is_notempty_char            (x) )
+parser.addParameter( 'correction', 'none', @(x) is_correction               (x) )
 parser.addParameter(  'threshold',  0.001, @(x) is_notempty_scalar_positive (x) )
 parser.addParameter(     'nvoxel',      0, @(x) is_notempty_scalar_positive (x) )
 parser.addParameter(     'outdir',     [], @(x) is_notempty_char            (x) )
@@ -35,26 +36,13 @@ threshold  = parser.Results.threshold ;
 nvoxel     = parser.Results.nvoxel    ;
 outdir     = parser.Results.outdir    ;
 
-fprintf('Harvesed paramters : \n')
+fprintf('Harvested paramters : \n')
 disp(parser.Results)
 
 
 %% Second step of checks
 
-% moodel
-for iModel = 1 : numel(model)
-    assert( exist(model{iModel},'file')==2 , 'model file does not exist : %s', model{iModel})
-end % iModel
-
-% anat
-for iAnat = 1 : numel(anat)
-    assert( exist(anat{iAnat},'file')==2 , 'anat file does not exist : %s', anat{iAnat})
-end % iAnat
-
 assert( numel(model)==numel(anat), 'numel(model) numel(anat) must be equal')
-
-% correction
-assert( any(strcmp(correction, {'FWE','none'})), 'correction can be ''FWE'' or ''none'' ' )
 
 % Create outdir if necessary
 if ~(exist(outdir,'dir')==7)
@@ -98,7 +86,7 @@ for iModel = 1 : numel(model)
         end
         
         % Change contrast
-        [hReg,xSPM,SPM] = change_contrast( con_index ,hReg,xSPM,SPM);
+        [hReg,xSPM,SPM] = change_contrast( con_index, xSPM );
         
         % Load anat
         spm_sections(xSPM,hReg,anat{iModel})
@@ -106,7 +94,7 @@ for iModel = 1 : numel(model)
         for iCoord = 1 : size(coord,1)
             
             disp(coord{iCoord,2})
-          
+            
             % Set coordinates
             spm_results_ui('SetCoords',coord{iCoord,1})
             
@@ -122,9 +110,7 @@ for iModel = 1 : numel(model)
             
         end % iCoord
         
-    end
-    
-    
+    end % iCon
     
 end % iModel
 
@@ -133,15 +119,11 @@ end % function
 
 
 
-
-
-
-
 %% Set contrast
 
-function [hReg,xSPM,SPM] = change_contrast( con_index ,hReg,xSPM,SPM)
+function [hReg,xSPM,SPM] = change_contrast( con_index, xSPM )
 xSPM2.swd   = xSPM.swd;
-try, xSPM2.units = xSPM.units; end
+try xSPM2.units = xSPM.units; end
 %         xSPM2.Ic    = getfield(get(obj,'UserData'),'Ic');
 xSPM2.Ic    = con_index;
 if isempty(xSPM2.Ic) || all(xSPM2.Ic == 0), xSPM2 = rmfield(xSPM2,'Ic'); end
@@ -182,7 +164,8 @@ assignin('base','TabDat',TabDat);
 end % function
 
 
-%% Validation funcion fof parameters
+
+%% Validation function of parameters
 
 %--------------------------------------------------------------------------
 function result = is_notempty_cell( x )
@@ -199,9 +182,38 @@ result = is_notempty_cell(x) && iscellstr(x);
 end % function
 
 %--------------------------------------------------------------------------
-function result = is_vector( x )
+function result = is_notempty_char( x )
 
-result = ~isempty(x) && isnumeric(x) && isvector(x) && numel(x)==3;
+result = ~isempty(x) && ischar(x);
+
+end % function
+
+%--------------------------------------------------------------------------
+function result = is_notempty_scalar_positive( x )
+
+result = ~isempty(x) && isscalar(x) && abs(x)==x;
+
+end % function
+
+%--------------------------------------------------------------------------
+function result = is_model( model )
+
+result = is_notempty_cellstr(model);
+
+for iModel = 1 : numel(model)
+    assert( exist(model{iModel},'file')==2 , 'model file does not exist : %s', model{iModel})
+end % iModel
+
+end % function
+
+%--------------------------------------------------------------------------
+function result = is_anat( anat )
+
+result = is_notempty_cellstr(anat);
+
+for iAnat = 1 : numel(anat)
+    assert( exist(anat{iAnat},'file')==2 , 'anat file does not exist : %s', anat{iAnat})
+end % iAnat
 
 end % function
 
@@ -227,15 +239,18 @@ end
 end % function
 
 %--------------------------------------------------------------------------
-function result = is_notempty_char( x )
+function result = is_correction( correction )
 
-result = ~isempty(x) && ischar(x);
+result = is_notempty_char(correction);
+
+assert( any(strcmp(correction, {'FWE','none'})), 'correction can be ''FWE'' or ''none'' ' )
+
 
 end % function
 
 %--------------------------------------------------------------------------
-function result = is_notempty_scalar_positive( x )
+function result = is_vector( x )
 
-result = ~isempty(x) && isscalar(x) && abs(x)==x;
+result = ~isempty(x) && isnumeric(x) && isvector(x) && numel(x)==3;
 
 end % function
