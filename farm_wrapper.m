@@ -9,17 +9,17 @@ assert( ~isempty(which('farm_rootdir'))    ,      'FARM library not detected. Ch
 
 %% Get file & sequence paramters
 
-% data_path = '/network/lustre/iss01/cenir/analyse/irm/users/benoit.beranger/INSIGHTEC_fmri_tremor/nifti/2020_02_07_DEV_382_INISGHTEC_PiloteACC01/electrophy';
-% fname     = '2020_02_07_INSIGHTEC_pil_001_01_EM_V1_run1';
-% sequence.nVol   = 841;  % integer or NaN, if [] it means use all volumes
+data_path = '/network/lustre/iss01/cenir/analyse/irm/users/benoit.beranger/INSIGHTEC_fmri_tremor/nifti/2020_02_07_DEV_382_INISGHTEC_PiloteACC01/electrophy';
+fname     = '2020_02_07_INSIGHTEC_pil_001_01_EM_V1_run1';
+sequence.nVol   = 841;  % integer or NaN, if [] it means use all volumes
 
 % data_path = '/network/lustre/iss01/cenir/analyse/irm/users/benoit.beranger/INSIGHTEC_fmri_tremor/nifti/2020_02_18_DEV_349_INSIGHTEC_PiloteEMGACC_02/electrophy';
 % fname     = '2020_02_18_DEV_349_INSIGHTEC_PiloteEMGACC_02_run01';
 % sequence.nVol   = 831;  % integer or NaN, if [] it means use all volumes
 
-data_path = fullfile(pwd,'nifti/2020_02_25_ULTRABRAIN_01_002_FJ_INCLUSION/electrophy');
-fname     = '2020_02_25_Patient002_FJ_run01';
-sequence.nVol   = [];  % integer or NaN, if [] it means use all volumes
+% data_path = fullfile(pwd,'nifti/2020_02_25_ULTRABRAIN_01_002_FJ_INCLUSION/electrophy');
+% fname     = '2020_02_25_Patient002_FJ_run01';
+% sequence.nVol   = [];  % integer or NaN, if [] it means use all volumes
 
 
 fname_eeg = fullfile(data_path, [fname '.eeg' ]);
@@ -148,6 +148,7 @@ data = farm_optimize_slice_template_using_PCA( data );
 
 data = farm_remove_slice_marker( data );
 
+return
 
 %% Time-frequencey analysis (TFA)
 
