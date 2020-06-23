@@ -122,7 +122,7 @@ par.run   = 1;
 par.fake  = 0;
 par.sge   = 0;
 par.redo  = 0;
-par.pct = 0;
+par.pct   = 0;
 
 % cluster
 par.walltime = '48:00:00';      % HH:MM:SS
@@ -132,6 +132,8 @@ par.sge_nb_coeur = 4;           % I dont't know why, but 2 CPU increase the "sta
 par.png = 0; % 009a1
 
 job_tedana( meinfo, 'vtd', 'tedana009a1_vtd_mdl', 'bet_Tmean_vtde1_mask.nii.gz ', par );
+
+e.getSerie('rs').getVolume({'tedana','bet'}).unzip_and_keep(par);
 
 
 %% Coregister
@@ -144,10 +146,12 @@ par.type  = 'estimate';
 
 src = e.getSerie('rs').removeEmpty.getVolume('^bet_Tmean_vtde1$');
 oth = e.getSerie('rs').removeEmpty.getVolume('^tedana.*ts_OC$');
-src.unzip
-oth.unzip
 tmp_exam = [e.getSerie('rs').removeEmpty.exam];
 ref = tmp_exam.getSerie('anat_T1').getVolume('^p0');
+
+% Save checkpoint
+to_zip_and_keep = src(:)+oth(:);
+to_zip_and_keep.zip_and_keep(par);
 
 job_coregister(src,ref,oth,par);
 
@@ -161,8 +165,11 @@ par.redo = 0;
 par.vox = [2.5 2.5 2.5]; % IMPORTANT keep original EPI voxel size
 img = e.getSerie('rs').getVolume('^tedana.*ts_OC$').removeEmpty;
 tmp_exam = [img.exam];
-y   = tmp_exam.getSerie('anat_T1').getVolume('^y');
+y   = tmp_exam.getSerie('anat_T1_UNI').getVolume('^y');
+
+par.auto_add_obj = 0;
 job_apply_normalize(y,img,par);
 
 % auto_add not yet proprely coded (17/02/2020)
-% e.getSerie('run').addVolume('tedana_vtd_mle','^wts_OC.nii$','wts_OC',1)
+e.getSerie('rs').addVolume('tedana',   '^wts_OC.nii$',   'wts_OC',1)
+e.getSerie('rs').addVolume('tedana','^wdn_ts_OC.nii$','wdn_ts_OC',1)
