@@ -71,10 +71,11 @@ par.doROI     = 0;         % Will compute the volume in each atlas region
 par.jacobian  = 0;         % Write jacobian determinant in normalize space
 
 anat = e.gser('anat_T1_UNI').gvol('^cs');
-job_do_segmentCAT12(anat,par)
+job_do_segmentCAT12(anat,par);
 
 % temporary, until the next PR :
 e.getSerie('anat_T1_UNI').addVolume('^p0.*nii','p0',1)
+
 
 %% Sort echos
 
@@ -124,14 +125,7 @@ par.sge   = 0;
 par.redo  = 0;
 par.pct   = 0;
 
-% cluster
-par.walltime = '48:00:00';      % HH:MM:SS
-par.mem      = '32G';           % ICA is very memory consuming
-par.sge_nb_coeur = 4;           % I dont't know why, but 2 CPU increase the "stability" of the job on the cluster
-
-par.png = 0; % 009a1
-
-job_tedana( meinfo, 'vtd', 'tedana009a1_vtd_mdl', 'bet_Tmean_vtde1_mask.nii.gz ', par );
+job_tedana_009a1( meinfo, 'vtd', 'tedana_vtd', 'bet_Tmean_vtde1_mask.nii.gz ', par );
 
 e.getSerie('rs').getVolume({'tedana','bet'}).unzip_and_keep(par);
 

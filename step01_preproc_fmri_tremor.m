@@ -27,14 +27,17 @@ e = exam(maindir,'nifti','ULTRABRAIN');
 e.addSerie('INV1$'      ,'anat_T1_INV1',1)
 e.addSerie('INV2$'      ,'anat_T1_INV2',1)
 e.addSerie('UNI_Images$','anat_T1_UNI' ,1)
-e.getSerie('anat').addVolume('^s.*nii','s',1)
+e.getExam( '002_FJ').getSerie('anat').addVolume('^s.*nii','s')
+e.getExam('0003_PP').getSerie('anat').addVolume('^v.*nii','v')
 
 % Run : Exec
-e.addSerie('fMRI_tremor$'        , 'run_nm', 1)
-e.addSerie('fMRI_tremor_refBLIP$', 'run_bp', 1) % refAP
+e.getExam( '002_FJ').addSerie('fMRI_tremor$'                 , 'run_nm', 1)
+e.getExam( '002_FJ').addSerie('fMRI_tremor_refBLIP$'         , 'run_bp', 1) % refAP
+e.getExam( '002_FJ').getSerie('run').addVolume('^f.*nii','f',1)
 
-e.getSerie('run').addVolume('^f.*nii','f',1)
-e.getSerie().addJson('^dic','j')
+e.getExam('0003_PP').addSerie('fMRI_tremor_run\d{2}$'        , 'run_nm',2)
+e.getExam('0003_PP').addSerie('fMRI_tremor_run\d{2}_refBLIP$', 'run_bp',2) % refAP
+e.getExam('0003_PP').getSerie('run').addVolume('^v.*nii','v',1)
 
 % Unzip if necessary (with PCT ?)
 e.unzipVolume(par);
@@ -46,18 +49,19 @@ e.explore
 
 %% denoise mp2rage
 
-% done graphically
+INV1 = e.getSerie('anat_T1_INV1').getVolume('^v|^s');
+INV2 = e.getSerie('anat_T1_INV2').getVolume('^v|^s');
+UNI  = e.getSerie('anat_T1_UNI' ).getVolume('^v|^s');
 
-e.getSerie('anat_T1_UNI').addVolume('^cs.*nii','cs',1)
+par.regularization = 50;
+par.prefix         = 'c';
+job_denoise_mp2rage(INV1,INV2,UNI,par);
+par = rmfield(par,'prefix');
 
 
 %% Segment anat with cat12
 
-clear par
-par.redo= 0;
-par.run = 1;
-par.pct = 0;
-par.sge = 0;
+
 
 par.subfolder = 0;         % 0 means "do not write in subfolder"
 par.biasstr   = 0.5;
@@ -73,58 +77,52 @@ par.doSurface = 0;
 par.doROI     = 0;         % Will compute the volume in each atlas region
 par.jacobian  = 0;         % Write jacobian determinant in normalize space
 
-anat = e.gser('anat_T1_UNI').gvol('^cs');
-job_do_segmentCAT12(anat,par)
-
-% temporary, until the next PR :
-e.getSerie('anat_T1_UNI').addVolume('^p0.*nii','p0',1)
+anat = e.gser('anat_T1_UNI').gvol('^c(s|v)');
+job_do_segmentCAT12(anat,par);
 
 
 %% Preprocess fMRI runs
 
 %realign and reslice
 par.type = 'estimate_and_reslice';
-ffunc_nm = e.getSerie('run_nm').getVolume('^f');
+ffunc_nm = e.getSerie('run_nm').getVolume('^(f|v)');
 j_realign_reslice_nm = job_realign(ffunc_nm,par);
 
 %realign and reslice opposite phase
 par.type = 'estimate_and_reslice';
-ffunc_bp = e.getSerie('run_bp').getVolume('^f');
+ffunc_bp = e.getSerie('run_bp').getVolume('^(f|v)');
 j_realign_reslice_op = job_realign(ffunc_bp,par);
 
 %topup and unwarp
-ffunc_all = e.getSerie('run').getVolume('^rf');
+ffunc_all = e.getSerie('run').getVolume('^r(f|v)');
 do_topup_unwarp_4D(ffunc_all,par);
 
 %coregister mean fonc on brain_anat
 fanat = e.getSerie('anat_T1_UNI').getVolume('^p0');
-fmean = e.getSerie('run_nm').getVolume('^utmeanf'); fmean = fmean(:,1); % use the mean of the run1 to estimate the coreg
-fo    = e.getSerie('run_nm').getVolume('^utrf');
+fmean = e.getSerie('run_nm').getVolume('^utmean(f|v)'); fmean = fmean(:,1); % use the mean of the run1 to estimate the coreg
+fo    = e.getSerie('run_nm').getVolume('^utr(f|v)');
 par.type = 'estimate';
 j_coregister=job_coregister(fmean,fanat,fo,par);
 
 %apply normalize
-fy = e.getSerie('anat_T1_UNI').getVolume('^y');
-par.vox      = [2.01923  2.01923  2];
-j_apply_normalize=job_apply_normalize(fy,fo   ,par);
-j_apply_normalize=job_apply_normalize(fy,fmean,par);
+par.vox    = [2.01923  2.01923  2];
+to_warp    = fo.removeEmpty + fmean.removeEmpty;
+warp_field = to_warp.getExam.getSerie('anat_T1_UNI').getVolume('^y');
+j_apply_normalize=job_apply_normalize(warp_field,to_warp,par);
 
 %smooth the data
-ffonc = e.getSerie('run_nm').getVolume('wutrf');
+ffonc = e.getSerie('run_nm').getVolume('wutr(f|v)').removeEmpty;
 par.smooth = [4 4 4];
 j_smooth=job_smooth(ffonc,par);
 
 % coregister WM & CSF on functionnal (using the warped mean)
 if isfield(par,'prefix'), par = rmfield(par,'prefix'); end
 ref = e.getSerie('run_nm');
-ref = ref(:,1).getVolume('^wutmeanf'); % first acquired run (time)
+ref = ref(:,1).getVolume('^wutmean(f|v)'); % first acquired run (time)
 src = e.getSerie('anat_T1_UNI').getVolume('^wp2');
 oth = e.getSerie('anat_T1_UNI').getVolume('^wp3');
 par.type = 'estimate_and_write';
 job_coregister(src,ref,oth,par);
 
 save('e','e')
-
-% e(1).getSerie('run_exec_001').getVolume('^rf').carpetplot
-
 
