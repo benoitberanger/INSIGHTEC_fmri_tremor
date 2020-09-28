@@ -24,12 +24,11 @@ onsetFile = e.getSerie('run_nm').getStim('stim').toJob(1);
 run = e.getSerie('run_nm');
 mask = run(:,1).getVolume('mask').toJob; % 1 mask per model, whatever the number of runs
 
-TR = 1.000;
 
 
 %% Models
 
-model_list = {'mod'};
+model_list = {'reg', 'dreg', 'log_reg', 'dlog_reg'};
 
 for l = 1 : length(model_list)
     e.getExam( '002_FJ').getSerie('run_nm'    ).addStim('electrophy',[        '__' model_list{l} '.mat$'], ['electrophy_' model_list{l} '_01'],1)
@@ -67,33 +66,10 @@ for iSubj = 1 : nSubj
         nRun = length(volume{iSubj});
         for iRun = 1 : nRun
             matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).scans = spm_select('expand',volume{iSubj}(iRun));
-            O = load(onsetFile{iSubj}{iRun});
-            M = load(model{iRun}{iSubj}{m});
-            for c = 1 : length(O.names)
-                matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).name     = O.names    {c};
-                matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).onset    = O.onsets   {c};
-                matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).duration = O.durations{c};
-                if strcmp(O.names{c},'Posture')
-                    posture_onset = [];
-                    for block = 1 : length(O.onsets{c})
-                        posture_onset = [posture_onset  O.onsets{c}(block) : TR : O.onsets{c}(block)+O.durations{c}(block)]; %#ok<AGROW>
-                    end
-                    matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).onset    = posture_onset;
-                    matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).duration = ones(size(posture_onset))*TR;
-                    matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).pmod.name  = 'TARGET';
-                    bin = false(size(M.R));
-                    bin(round(posture_onset)) = true;
-                    matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).pmod.param = M.R(bin);
-                    matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).pmod.poly  = 1;
-                else
-                    matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).pmod = struct('name', {}, 'param', {}, 'poly', {});
-                end
-                matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).tmod = 0;
-                matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).orth = 1;
-            end
-            matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).multi = {''};
+            matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
+            matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).multi = onsetFile{iSubj}(iRun);
             matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).regress = struct('name', {}, 'val', {});
-            matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).multi_reg = rp{iSubj}(iRun);
+            matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).multi_reg = [model{iRun}{iSubj}(m) ; rp{iSubj}(iRun)];
             matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).hpf = 128;
         end % iRun
         
@@ -149,16 +125,17 @@ job_first_level_estimate(fspm,par);
 Instructions = [1 0 0 0   0];
 Relax        = [0 1 0 0   0];
 Posture      = [0 0 1 0   0];
-TARGET       = [0 0 0 1   0];  % <=== modulator
-EndText      = [0 0 0 0   1];
+EndText      = [0 0 0 1   0];
+TARGET       = [0 0 0 0   1];
 
 contrast_T.values = {
     
 Instructions
 Relax
 Posture
-TARGET
 EndText
+TARGET
+
 
 Posture-Relax
 
@@ -169,8 +146,8 @@ contrast_T.names = {
 'Instructions'
 'Relax'
 'Posture'
-'TARGET'
 'EndText'
+'TARGET'
 
 }';
 

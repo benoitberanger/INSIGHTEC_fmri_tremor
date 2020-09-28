@@ -8,6 +8,13 @@ assert( ~isempty(which('farm_rootdir'))    ,      'FARM library not detected. Ch
 
 load e
 
+fmri_volume = e.getSerie('run_nm').getVolume('sw').removeEmpty.getPath;
+nVol = zeros(size(fmri_volume));
+for i = 1 : length(fmri_volume)
+    nii     = nifti(fmri_volume{i});
+    nVol(i) = size(nii.dat,4);
+end
+
 subjdir       = e.getPath;
 electrophydir = fullfile(subjdir,'electrophy');
 filepath      = gfile(electrophydir,'run\d{2}.eeg$');
@@ -23,12 +30,11 @@ for iRun = 1 : length(filepath)
     
     sequence.TR     = 1.000; % in seconds
     sequence.nSlice = 72;
-    sequence.MB     = 6;   % multiband factor
+    sequence.MB     = 6;     % multiband factor
+    sequence.nVol   = nVol(iRun);
     
     MRI_trigger_message = 'R128';
     
-    % In this sample dataset, channels are { 'EXT_D' 'FLE_D' 'EXT_G' 'FLE_G' }
-    % FARM will be performed on all 4 channels, so I create a regex that will fetch them :
     emg_channel_regex = 'FCR|ECR|DEL|BIC|TRI';
     
     
@@ -40,10 +46,9 @@ for iRun = 1 : length(filepath)
     % Read header & events
     cfg           = [];
     cfg.dataset   = fname_hdr{iRun};
-    raw_event     = ft_read_event (fname_mrk{iRun});
+    raw_event     = ft_read_event(fname_mrk{iRun});
     event         = farm_change_marker_value(raw_event, MRI_trigger_message, 'V'); % rename volume marker, just for comfort
     event         = farm_delete_marker(event, 'Sync On');                          % not useful for FARM, this marker comes from the clock synchronization device
-    event         = farm_remove_last_volume_event( event, 'V' );                   % remove last incomplete volume, becasue of manually stopped sequence
     
     % Load data
     data                    = ft_preprocessing(cfg); % load data
@@ -70,31 +75,31 @@ for iRun = 1 : length(filepath)
     data = farm_main_workflow( data, emg_channel_regex );
     
     
-    %% Some plots
-    
-    figH = farm_plot_FFT(data, emg_channel_regex, 'pca_clean', [30 250]  ); farm_print_figure( data, figH ); close(figH);
-    figH = farm_plot_FFT(data,             'ACC',       'raw', [ 2   8],2); farm_print_figure( data, figH ); close(figH);
-    
-    
-    %% Time-Frequency Analysis
-    
-    cfg_TFA = [];
-    cfg_TFA.emg_regex = emg_channel_regex;
-    cfg_TFA.acc_regex = 'ACC';
-    
-    TFA = farm_time_frequency_analysis_emg_acc( data, cfg_TFA );
-    figH = farm_plot_TFA( data, TFA ); farm_print_figure( data, figH ); close(figH);
-    
-    
-    %% Coherence Analysis
-    
-    cfg_coh = [];
-    cfg_coh.emg_regex = emg_channel_regex;
-    cfg_coh.acc_regex = 'ACC';
-    
-    coh = farm_coherence_analysis_emg_acc( data, cfg_coh );
-    % ft_connectivityplot([], coh);
-    figH = farm_plot_coherence( data, coh ); farm_print_figure( data, figH ); close(figH);
+%     %% Some plots
+%     
+%     figH = farm_plot_FFT(data, emg_channel_regex, 'pca_clean', [30 250]  ); farm_print_figure( data, figH ); close(figH);
+%     figH = farm_plot_FFT(data,             'ACC',       'raw', [ 2   8],2); farm_print_figure( data, figH ); close(figH);
+%     
+%     
+%     %% Time-Frequency Analysis
+%     
+%     cfg_TFA = [];
+%     cfg_TFA.emg_regex = emg_channel_regex;
+%     cfg_TFA.acc_regex = 'ACC';
+%     
+%     TFA = farm_time_frequency_analysis_emg_acc( data, cfg_TFA );
+%     figH = farm_plot_TFA( data, TFA ); farm_print_figure( data, figH ); close(figH);
+%     
+%     
+%     %% Coherence Analysis
+%     
+%     cfg_coh = [];
+%     cfg_coh.emg_regex = emg_channel_regex;
+%     cfg_coh.acc_regex = 'ACC';
+%     
+%     coh = farm_coherence_analysis_emg_acc( data, cfg_coh );
+%     % ft_connectivityplot([], coh);
+%     figH = farm_plot_coherence( data, coh ); farm_print_figure( data, figH ); close(figH);
     
     
     %% Select best EMG channel, that matches ACC using coherence
@@ -108,9 +113,9 @@ for iRun = 1 : length(filepath)
     
     %% Generate regressors
     
-    reginfo      = farm_make_regressor( best_emg.peakpower, best_emg.fsample, sequence.TR);
+    reginfo      = farm_make_regressor( data, best_emg.peakpower, best_emg.fsample);
     reginfo.name = ['peakpower@bestemg==' best_emg.label];
-    figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
+%     figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
     farm_save_regressor(data, reginfo)
     
     

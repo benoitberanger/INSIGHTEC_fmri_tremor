@@ -124,5 +124,10 @@ oth = e.getSerie('anat_T1_UNI').getVolume('^wp3');
 par.type = 'estimate_and_write';
 job_coregister(src,ref,oth,par);
 
+% robust EPI mask for firstlevel
+epi = e.getSerie('run_nm').getVolume('^wutr(f|v)').removeEmpty;
+par.fsl_output_format = 'NIFTI';
+do_fsl_robust_mask_epi(epi,par);
+
 save('e','e')
 

@@ -4,70 +4,69 @@ clc
 load e.mat
 
 
-%% Prepare paths and regexp
+%% Cluster ?
 
-par.display = 0;
-par.run     = 1;
-par.pct     = 0;
-par.verbose = 2;
+CLUSTER = 0;
 
 
 %% dirs & files
 
-model_name = {'classic','tapas'};
+model_name = 'boxcar';
 
-dirStats_1 = e.mkdir('model',model_name{1});
-dirStats_2 = e.mkdir('model',model_name{2});
+dirStats = e.mkdir('model',model_name);
 
 dirFonc = e.getSerie('run_nm').toJob;
-e.getSerie('run_nm').addStim('onsets','.mat','stim',1)
+
+e.getExam( '002_FJ').getSerie('run_nm'    ).addStim('onsets',     '.mat','stim'   ,1)
+e.getExam('0003_PP').getSerie('run_nm_001').addStim('onsets','run01.mat','stim_01',1)
+e.getExam('0003_PP').getSerie('run_nm_002').addStim('onsets','run02.mat','stim_02',1)
+
 onsetFile = e.getSerie('run_nm').getStim('stim').toJob;
-e.getSerie('run_nm').addVolume('mask.nii','mask',1)
+run = e.getSerie('run_nm');
+mask = run(:,1).getVolume('mask').toJob; % 1 mask per model, whatever the number of runs
 
 par.rp       = 1;
 par.file_reg = '^sw.*nii';
+par.TR       = 1.000;
 
 
-%% Specify boxcar
+%% Specify
 
+if CLUSTER
+    par.run = 0;
+    par.sge = 1;
+    par.sge_queu = 'normal,bigmem';
+else
+    par.run = 1;
+    par.sge = 0;
+end
 par.redo    = 0;
-par.sge     = 0;
-par.run     = 0;
 par.display = 0;
+par.jobname  = 'spm_glm_def';
 par.mask_thr = 0.1;
-par.mask = e.getSerie('run_nm').getVolume('mask').toJob;
-
-% Boxcar + 6rp (classic)
-par.rp_regex = '^rp.*txt';
-job1 = job_first_level_specify(dirFonc,dirStats_1,onsetFile,par);
 
 % Boxcar + TAPAS
 par.rp_regex = 'multiple_regressors.txt';
-job2 = job_first_level_specify(dirFonc,dirStats_2,onsetFile,par);
+job_first_level_specify(dirFonc,dirStats,onsetFile,par);
 
-jobs = [job1 job2 ];
-
-par.sge     = 1;
-par.run     = 0;
-par.display = 0;
-par.jobname  = 'spm_glm_def';
-
-job_ending_rountines(jobs,[],par);
-
-return
 
 %% Estimate
 
-e.addModel('model','^classic$','classic');
-e.addModel('model','^tapas$','tapas');
+e.addModel('model','^boxcar$','boxcar');
 
 save('e','e')
 
-fspm = e.getModel(cellstr2regex({'classic','tapas'},1)).removeEmpty.toJob;
+fspm = e.getModel('boxcar').removeEmpty.toJob;
 
 clear par
-par.sge     = 1;
-par.run     = 0;
+if CLUSTER
+    par.run = 0;
+    par.sge = 1;
+    par.sge_queu = 'normal,bigmem';
+else
+    par.run = 1;
+    par.sge = 0;
+end
 par.display = 0;
 job_first_level_estimate(fspm,par);
 
@@ -115,16 +114,20 @@ contrast.types  = [contrast_F.types  contrast_T.types ];
 %% Contrast : write
 
 clear par
-par.sge     = 1;
-par.run     = 0;
+if CLUSTER
+    par.run = 0;
+    par.sge = 1;
+    par.sge_queu = 'normal,bigmem';
+else
+    par.run = 1;
+    par.sge = 0;
+end
 par.display = 0;
 par.jobname  = 'spm_glm_con';
 
-par.sessrep = 'none';
+par.sessrep = 'repl';
 
 par.delete_previous = 1;
 par.report=0;
-fspm = e.getModel(cellstr2regex({'classic','tapas'},1)).removeEmpty.toJob;
 job_first_level_contrast(fspm,contrast,par);
-
 
