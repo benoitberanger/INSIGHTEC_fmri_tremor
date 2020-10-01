@@ -102,20 +102,29 @@ for iRun = 1 : length(filepath)
 %     figH = farm_plot_coherence( data, coh ); farm_print_figure( data, figH ); close(figH);
     
     
-    %% Select best EMG channel, that matches ACC using coherence
+%     %% Select best EMG channel, that matches ACC using coherence
+%     
+%     cfg_select_emg = [];
+%     cfg_select_emg.emg_regex = emg_channel_regex;
+%     cfg_select_emg.acc_regex = 'ACC';
+%     
+%     best_emg = farm_select_best_emg_using_acc_coherence( data, cfg_select_emg );
+%     
+%     
+%     %% Generate regressors
+%     
+%     reginfo      = farm_make_regressor( data, best_emg.peakpower, best_emg.fsample);
+%     reginfo.name = ['peakpower@bestemg==' best_emg.label];
+% %     figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
+%     farm_save_regressor(data, reginfo)
     
-    cfg_select_emg = [];
-    cfg_select_emg.emg_regex = emg_channel_regex;
-    cfg_select_emg.acc_regex = 'ACC';
     
-    best_emg = farm_select_best_emg_using_acc_coherence( data, cfg_select_emg );
+    %% Accelerometer : this regressor will be a backup in case of bad EMG
     
-    
-    %% Generate regressors
-    
-    reginfo      = farm_make_regressor( data, best_emg.peakpower, best_emg.fsample);
-    reginfo.name = ['peakpower@bestemg==' best_emg.label];
-%     figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
+    acc          = farm_get_timeseries(data,'ACC','raw', [2 8],2);
+    reginfo      = farm_acc_regressor(data, acc);
+    reginfo.name = 'euclidiannorm@ACCXYZ';
+    figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
     farm_save_regressor(data, reginfo)
     
     
