@@ -8,6 +8,7 @@ assert( ~isempty(which('farm_rootdir'))    ,      'FARM library not detected. Ch
 
 load e
 
+
 fmri_volume = e.getSerie('run_nm').getVolume('sw').removeEmpty.getPath;
 nVol = zeros(size(fmri_volume));
 for i = 1 : length(fmri_volume)
@@ -75,48 +76,48 @@ for iRun = 1 : length(filepath)
     data = farm_main_workflow( data, emg_channel_regex );
     
     
-%     %% Some plots
-%     
-%     figH = farm_plot_FFT(data, emg_channel_regex, 'pca_clean', [30 250]  ); farm_print_figure( data, figH ); close(figH);
-%     figH = farm_plot_FFT(data,             'ACC',       'raw', [ 2   8],2); farm_print_figure( data, figH ); close(figH);
-%     
-%     
-%     %% Time-Frequency Analysis
-%     
-%     cfg_TFA = [];
-%     cfg_TFA.emg_regex = emg_channel_regex;
-%     cfg_TFA.acc_regex = 'ACC';
-%     
-%     TFA = farm_time_frequency_analysis_emg_acc( data, cfg_TFA );
-%     figH = farm_plot_TFA( data, TFA ); farm_print_figure( data, figH ); close(figH);
-%     
-%     
-%     %% Coherence Analysis
-%     
-%     cfg_coh = [];
-%     cfg_coh.emg_regex = emg_channel_regex;
-%     cfg_coh.acc_regex = 'ACC';
-%     
-%     coh = farm_coherence_analysis_emg_acc( data, cfg_coh );
-%     % ft_connectivityplot([], coh);
-%     figH = farm_plot_coherence( data, coh ); farm_print_figure( data, figH ); close(figH);
+    %% Some plots
+    
+    figH = farm_plot_FFT(data, emg_channel_regex, 'pca_clean', [30 250]  ); farm_print_figure( data, figH ); close(figH);
+    figH = farm_plot_FFT(data,             'ACC',       'raw', [ 2   8],2); farm_print_figure( data, figH ); close(figH);
     
     
-%     %% Select best EMG channel, that matches ACC using coherence
-%     
-%     cfg_select_emg = [];
-%     cfg_select_emg.emg_regex = emg_channel_regex;
-%     cfg_select_emg.acc_regex = 'ACC';
-%     
-%     best_emg = farm_select_best_emg_using_acc_coherence( data, cfg_select_emg );
-%     
-%     
-%     %% Generate regressors
-%     
-%     reginfo      = farm_make_regressor( data, best_emg.peakpower, best_emg.fsample);
-%     reginfo.name = ['peakpower@bestemg==' best_emg.label];
-% %     figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
-%     farm_save_regressor(data, reginfo)
+    %% Time-Frequency Analysis
+    
+    cfg_TFA = [];
+    cfg_TFA.emg_regex = emg_channel_regex;
+    cfg_TFA.acc_regex = 'ACC';
+    
+    TFA = farm_time_frequency_analysis_emg_acc( data, cfg_TFA );
+    figH = farm_plot_TFA( data, TFA ); farm_print_figure( data, figH ); close(figH);
+    
+    
+    %% Coherence Analysis
+    
+    cfg_coh = [];
+    cfg_coh.emg_regex = emg_channel_regex;
+    cfg_coh.acc_regex = 'ACC';
+    
+    coh = farm_coherence_analysis_emg_acc( data, cfg_coh );
+    % ft_connectivityplot([], coh);
+    figH = farm_plot_coherence( data, coh ); farm_print_figure( data, figH ); close(figH);
+    
+    
+    %% Select best EMG channel, that matches ACC using coherence
+    
+    cfg_select_emg = [];
+    cfg_select_emg.emg_regex = emg_channel_regex;
+    cfg_select_emg.acc_regex = 'ACC';
+    
+    best_emg = farm_select_best_emg_using_acc_coherence( data, cfg_select_emg );
+    
+    
+    %% Generate regressors
+    
+    reginfo      = farm_make_regressor( data, best_emg.peakpower, best_emg.fsample);
+    reginfo.name = ['peakpower@bestemg==' best_emg.label];
+    figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
+    farm_save_regressor(data, reginfo)
     
     
     %% Accelerometer : this regressor will be a backup in case of bad EMG
