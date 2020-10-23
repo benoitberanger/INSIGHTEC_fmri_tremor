@@ -12,32 +12,37 @@ maindir = '/network/lustre/iss01/cenir/analyse/irm/users/benoit.beranger/INSIGHT
 % end
 
 par.redo= 0;
-par.run = 1;
+par.run = 0;
 par.pct = 0;
-par.sge = 0;
+par.sge = 1;
 
 
 %% Get files paths
 
 % e = exam(maindir,'nifti',{'INISGHTEC','INSIGHTEC','ULTRABRAIN'});
-e = exam(maindir,'nifti','ULTRABRAIN');
+e = exam(maindir,'nifti','ULTRABRAIN'); 
 
 
 % T1
 e.addSerie('INV1$'      ,'anat_T1_INV1',1)
 e.addSerie('INV2$'      ,'anat_T1_INV2',1)
 e.addSerie('UNI_Images$','anat_T1_UNI' ,1)
-e.getExam( '002_FJ').getSerie('anat').addVolume('^s.*nii','s')
-e.getExam('0003_PP').getSerie('anat').addVolume('^v.*nii','v')
+e.getExam( '002_FJ_INCLUSION'   ).getSerie('anat').addVolume('^s.*nii','s')
+e.getExam('0003_PP_V1_INCLUSION').getSerie('anat').addVolume('^v.*nii','v')
+e.getExam('0002_FJ_V4'          ).getSerie('anat').addVolume('^v.*nii','v')
 
 % Run : Exec
-e.getExam( '002_FJ').addSerie('fMRI_tremor$'                 , 'run_nm', 1)
-e.getExam( '002_FJ').addSerie('fMRI_tremor_refBLIP$'         , 'run_bp', 1) % refAP
-e.getExam( '002_FJ').getSerie('run').addVolume('^f.*nii','f',1)
+e.getExam( '002_FJ_INCLUSION'   ).addSerie('fMRI_tremor$'                 , 'run_nm', 1)
+e.getExam( '002_FJ_INCLUSION'   ).addSerie('fMRI_tremor_refBLIP$'         , 'run_bp', 1) % refAP
+e.getExam( '002_FJ_INCLUSION'   ).getSerie('run').addVolume('^f.*nii','f',1)
 
-e.getExam('0003_PP').addSerie('fMRI_tremor_run\d{2}$'        , 'run_nm',2)
-e.getExam('0003_PP').addSerie('fMRI_tremor_run\d{2}_refBLIP$', 'run_bp',2) % refAP
-e.getExam('0003_PP').getSerie('run').addVolume('^v.*nii','v',1)
+e.getExam('0003_PP_V1_INCLUSION').addSerie('fMRI_tremor_run\d{2}$'        , 'run_nm',2)
+e.getExam('0003_PP_V1_INCLUSION').addSerie('fMRI_tremor_run\d{2}_refBLIP$', 'run_bp',2) % refAP
+e.getExam('0003_PP_V1_INCLUSION').getSerie('run').addVolume('^v.*nii','v',1)
+
+e.getExam('0002_FJ_V4'          ).addSerie('fMRI_tremor$'                 , 'run_nm', 1)
+e.getExam('0002_FJ_V4'          ).addSerie('fMRI_tremor_refBLIP$'         , 'run_bp', 1) % refAP
+e.getExam('0002_FJ_V4'          ).getSerie('run').addVolume('^v.*nii','v',1)
 
 % Unzip if necessary (with PCT ?)
 e.unzipVolume(par);
@@ -61,8 +66,6 @@ par = rmfield(par,'prefix');
 
 %% Segment anat with cat12
 
-
-
 par.subfolder = 0;         % 0 means "do not write in subfolder"
 par.biasstr   = 0.5;
 par.accstr    = 0.5;
@@ -80,6 +83,10 @@ par.jacobian  = 0;         % Write jacobian determinant in normalize space
 anat = e.gser('anat_T1_UNI').gvol('^c(s|v)');
 job_do_segmentCAT12(anat,par);
 
+par.jobname = 'zipWMCSF';
+e.gser('anat_T1_UNI').gvol('^wp[23]').zip_and_keep(par);
+par = rmfield(par,'jobname');
+
 
 %% Preprocess fMRI runs
 
@@ -96,13 +103,18 @@ j_realign_reslice_op = job_realign(ffunc_bp,par);
 %topup and unwarp
 ffunc_all = e.getSerie('run').getVolume('^r(f|v)');
 do_topup_unwarp_4D(ffunc_all,par);
+par.jobname = 'zipUT';
+e.gser('run').gvol('^ut').zip_and_keep(par);
+par = rmfield(par,'jobname');
 
 %coregister mean fonc on brain_anat
 fanat = e.getSerie('anat_T1_UNI').getVolume('^p0');
 fmean = e.getSerie('run_nm').getVolume('^utmean(f|v)'); fmean = fmean(:,1); % use the mean of the run1 to estimate the coreg
 fo    = e.getSerie('run_nm').getVolume('^utr(f|v)');
 par.type = 'estimate';
+par.jobname = 'spm_coreg_epi2anat';
 j_coregister=job_coregister(fmean,fanat,fo,par);
+par = rmfield(par,'jobname');
 
 %apply normalize
 par.vox    = [2.01923  2.01923  2];
@@ -122,7 +134,9 @@ ref = ref(:,1).getVolume('^wutmean(f|v)'); % first acquired run (time)
 src = e.getSerie('anat_T1_UNI').getVolume('^wp2');
 oth = e.getSerie('anat_T1_UNI').getVolume('^wp3');
 par.type = 'estimate_and_write';
+par.jobname = 'spm_coreg_wmcsf2epi';
 job_coregister(src,ref,oth,par);
+par = rmfield(par,'jobname');
 
 % robust EPI mask for firstlevel
 epi = e.getSerie('run_nm').getVolume('^wutr(f|v)').removeEmpty;
