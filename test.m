@@ -7,10 +7,9 @@ assert( ~isempty(which('ft_preprocessing')), 'FieldTrip library not detected. Ch
 assert( ~isempty(which('farm_rootdir'))    ,      'FARM library not detected. Check your MATLAB paths, or get : https://github.com/benoitberanger/FARM' )
 
 load e
-% e = e(end);
+e = e(end);
 
-fmri_volume = e.getSerie('run_nm').getVolume('^v').removeEmpty.getPath;
-fmri_volume = sort(fmri_volume);
+fmri_volume = e.getSerie('run_nm').getVolume('sw').removeEmpty.getPath;
 nVol = zeros(size(fmri_volume));
 for i = 1 : length(fmri_volume)
     nii     = nifti(fmri_volume{i});
@@ -21,13 +20,10 @@ subjdir       = e.getPath;
 electrophydir = fullfile(subjdir,'electrophy');
 filepath      = gfile(electrophydir,'run\d{2}.eeg$');
 filepath      = cellstr(char(filepath));
-filepath      = sort(filepath);
 
 fname_eeg = filepath;
 fname_hdr = spm_file(filepath, 'ext', '.vhdr');
 fname_mrk = spm_file(filepath, 'ext', '.vmrk');
-
-%%
 
 for iRun = 1 : length(filepath)
     %% Get file & sequence paramters
@@ -40,7 +36,7 @@ for iRun = 1 : length(filepath)
     MRI_trigger_message = 'R128';
     
     emg_channel_regex = 'FCR|ECR|DEL|BIC|TRI';
-    
+%     emg_channel_regex = 'TRI';
     
     %% Load data
     % Optimal length for a dataset is a bunch of seconds before the start of
@@ -60,18 +56,24 @@ for iRun = 1 : length(filepath)
     data.sequence           = sequence;              % store sequence parameters
     data.volume_marker_name = 'V';                   % name of the volume event in data.cfg.event
     
-    assert( nVol(iRun) <= numel(farm.sequence.get_volume_event(data)) )
-    
     % Some paramters tuning
     data.cfg.intermediate_results_overwrite = false; % don't overwrite files
     data.cfg.intermediate_results_save      = true;  % write on disk intermediate results
     data.cfg.intermediate_results_load      = true;  % if intermediate result file is detected, to not re-do step and load file
     
+    % Output directory
+    % If no outdir is defined, use the same as inputdir
+    outdir = '/network/lustre/iss01/cenir/analyse/irm/users/benoit.beranger/INSIGHTEC_fmri_tremor/test';
+    data.cfg.outdir.intermediate = fullfile( outdir ); % intermediate results
+    data.cfg.outdir.BVAexport    = fullfile( outdir ); % export final results in {.eeg, .vhdr, .vmrk}
+    data.cfg.outdir.MATexport    = fullfile( outdir ); % export final results in .mat
+    data.cfg.outdir.png          = fullfile( outdir ); % write PNG here, for visual quick check
+    data.cfg.outdir.regressor    = fullfile( outdir ); % write regressor here, in .mat
+
+    
     % Plot
     % ft_databrowser(data.cfg, data)
-    cfg.dataset
-    [data.label num2cell(data.hdr.orig.impedances.channels)]
-    % continue
+    
     
     %% ------------------------------------------------------------------------
     %% FARM
@@ -80,60 +82,19 @@ for iRun = 1 : length(filepath)
     % A lot of functions use what is called "regular expressions" (regex). It allows to recognize patterns in strings of characters
     % This a powerfull tool, which is common to almost all programing languages. Open some documentation with : doc regular-expressions
     
-    data = farm_main_workflow( data, emg_channel_regex );
     
+%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     [ datapoints, channel_idx, channel_name, stage ] = farm.plot.get_datapoints( data, emg_channel_regex, 'raw' );
+%     filter = -500;
+%     datapoints = farm.filter(datapoints, data.fsample, filter);
+%     data.trial{1}(channel_idx,:) = datapoints;
+%     
+%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     
+%     data = farm_main_workflow( data, emg_channel_regex );
+%     farm_plot_FFT(data, emg_channel_regex, 'pca_clean', [30 250]  );
+%     return
     
-    %% Some plots
-    
-    figH = farm_plot_FFT(data, emg_channel_regex, 'pca_clean', [30 250]  ); farm_print_figure( data, figH ); close(figH);
-    figH = farm_plot_FFT(data,             'ACC',       'raw', [ 2   8],2); farm_print_figure( data, figH ); close(figH);
-    
-    
-    %% Time-Frequency Analysis
-    
-    cfg_TFA = [];
-    cfg_TFA.emg_regex = emg_channel_regex;
-    cfg_TFA.acc_regex = '(^ACC)|(R_ACC)';
-    
-    TFA = farm_time_frequency_analysis_emg_acc( data, cfg_TFA );
-    figH = farm_plot_TFA( data, TFA ); farm_print_figure( data, figH ); close(figH);
-    
-    
-    %% Coherence Analysis
-    
-    cfg_coh = [];
-    cfg_coh.emg_regex = emg_channel_regex;
-    cfg_coh.acc_regex = '(^ACC)|(R_ACC)';
-    
-    coh = farm_coherence_analysis_emg_acc( data, cfg_coh );
-    % ft_connectivityplot([], coh);
-    figH = farm_plot_coherence( data, coh ); farm_print_figure( data, figH ); close(figH);
-    
-    
-    %% Select best EMG channel, that matches ACC using coherence
-    
-    cfg_select_emg = [];
-    cfg_select_emg.emg_regex = emg_channel_regex;
-    cfg_select_emg.acc_regex = '(^ACC)|(R_ACC)';
-    
-    best_emg = farm_select_best_emg_using_acc_coherence( data, cfg_select_emg );
-    
-    
-    %% Generate regressors
-    
-    reginfo      = farm_make_regressor( data, best_emg.peakpower, best_emg.fsample);
-    reginfo.name = ['peakpower@bestemg==' best_emg.label];
-    figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
-    farm_save_regressor(data, reginfo)
-    
-    
-    %% Accelerometer : this regressor will be a backup in case of bad EMG
-    
-    acc          = farm_get_timeseries(data,'(^ACC)|(R_ACC)','raw', [2 8],2);
-    reginfo      = farm_acc_regressor(data, acc);
-    reginfo.name = 'euclidiannorm@ACCXYZ';
-    figH         = farm_plot_regressor( data, reginfo ); farm_print_figure( data, figH ); close(figH);
-    farm_save_regressor(data, reginfo)
-    
-    
+
+
 end

@@ -22,27 +22,21 @@ par.sge = 1;
 % e = exam(maindir,'nifti',{'INISGHTEC','INSIGHTEC','ULTRABRAIN'});
 e = exam(maindir,'nifti','ULTRABRAIN'); 
 
+e_2run = e.getExam('0003_PP_V1_INCLUSION');
+e_1run = e - e_2run;
 
 % T1
 e.addSerie('INV1$'      ,'anat_T1_INV1',1)
 e.addSerie('INV2$'      ,'anat_T1_INV2',1)
 e.addSerie('UNI_Images$','anat_T1_UNI' ,1)
-e.getExam( '002_FJ_INCLUSION'   ).getSerie('anat').addVolume('^s.*nii','s')
-e.getExam('0003_PP_V1_INCLUSION').getSerie('anat').addVolume('^v.*nii','v')
-e.getExam('0002_FJ_V4'          ).getSerie('anat').addVolume('^v.*nii','v')
+e.getSerie('anat').addVolume('^v.*nii','v')
 
 % Run : Exec
-e.getExam( '002_FJ_INCLUSION'   ).addSerie('fMRI_tremor$'                 , 'run_nm', 1)
-e.getExam( '002_FJ_INCLUSION'   ).addSerie('fMRI_tremor_refBLIP$'         , 'run_bp', 1) % refAP
-e.getExam( '002_FJ_INCLUSION'   ).getSerie('run').addVolume('^f.*nii','f',1)
-
-e.getExam('0003_PP_V1_INCLUSION').addSerie('fMRI_tremor_run\d{2}$'        , 'run_nm',2)
-e.getExam('0003_PP_V1_INCLUSION').addSerie('fMRI_tremor_run\d{2}_refBLIP$', 'run_bp',2) % refAP
-e.getExam('0003_PP_V1_INCLUSION').getSerie('run').addVolume('^v.*nii','v',1)
-
-e.getExam('0002_FJ_V4'          ).addSerie('fMRI_tremor$'                 , 'run_nm', 1)
-e.getExam('0002_FJ_V4'          ).addSerie('fMRI_tremor_refBLIP$'         , 'run_bp', 1) % refAP
-e.getExam('0002_FJ_V4'          ).getSerie('run').addVolume('^v.*nii','v',1)
+e_1run.addSerie('fMRI_tremor$'                 , 'run_nm', 1)
+e_1run.addSerie('fMRI_tremor_refBLIP$'         , 'run_bp', 1) % refAP
+e_2run.addSerie('fMRI_tremor_run\d{2}$'        , 'run_nm', 2)
+e_2run.addSerie('fMRI_tremor_run\d{2}_refBLIP$', 'run_bp', 2) % refAP
+e.getSerie('run').addVolume('^v.*nii','v',1)
 
 % Unzip if necessary (with PCT ?)
 e.unzipVolume(par);
@@ -54,9 +48,9 @@ e.explore
 
 %% denoise mp2rage
 
-INV1 = e.getSerie('anat_T1_INV1').getVolume('^v|^s');
-INV2 = e.getSerie('anat_T1_INV2').getVolume('^v|^s');
-UNI  = e.getSerie('anat_T1_UNI' ).getVolume('^v|^s');
+INV1 = e.getSerie('anat_T1_INV1').getVolume('^v');
+INV2 = e.getSerie('anat_T1_INV2').getVolume('^v');
+UNI  = e.getSerie('anat_T1_UNI' ).getVolume('^v');
 
 par.regularization = 50;
 par.prefix         = 'c';
@@ -80,7 +74,7 @@ par.doSurface = 0;
 par.doROI     = 0;         % Will compute the volume in each atlas region
 par.jacobian  = 0;         % Write jacobian determinant in normalize space
 
-anat = e.gser('anat_T1_UNI').gvol('^c(s|v)');
+anat = e.gser('anat_T1_UNI').gvol('^cv');
 job_do_segmentCAT12(anat,par);
 
 par.jobname = 'zipWMCSF';
