@@ -16,9 +16,12 @@ volume = e.getSerie('run_nm').getVolume('^sw').toJob(1);
 e.getSerie('run_nm').addJson('multiple_regressors.txt','rp')
 rp = e.getSerie('run_nm').getJson('rp').toJob(1);
 
-e.getExam( '002_FJ').getSerie('run_nm'    ).addStim('onsets',     '.mat','stim'   ,1)
-e.getExam('0003_PP').getSerie('run_nm_001').addStim('onsets','run01.mat','stim_01',1)
-e.getExam('0003_PP').getSerie('run_nm_002').addStim('onsets','run02.mat','stim_02',1)
+e_2run = e.getExam('0003_PP_V1_INCLUSION');
+e_1run = e - e_2run;
+
+e_1run.getSerie('run_nm'    ).addStim('onsets','run01.mat$','stim'   ,1)
+e_2run.getSerie('run_nm_001').addStim('onsets','run01.mat$','stim_01',1)
+e_2run.getSerie('run_nm_002').addStim('onsets','run02.mat$','stim_02',1)
 onsetFile = e.getSerie('run_nm').getStim('stim').toJob(1);
 
 run = e.getSerie('run_nm');
@@ -32,9 +35,9 @@ TR = 1.000;
 model_list = {'mod', 'log_mod', 'dmod', 'dlog_mod'};
 
 for l = 1 : length(model_list)
-    a=e.getExam( '002_FJ').getSerie('run_nm'    ).addStim('electrophy',[     '__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_01']);
-    a=e.getExam('0003_PP').getSerie('run_nm_001').addStim('electrophy',['run01__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_01']);
-    a=e.getExam('0003_PP').getSerie('run_nm_001').addStim('electrophy',['run02__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_02']);
+    a=e_1run.getSerie('run_nm'    ).addStim('electrophy',[     '__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_01']);
+    a=e_2run.getSerie('run_nm_001').addStim('electrophy',['run01__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_01']);
+    a=e_2run.getSerie('run_nm_001').addStim('electrophy',['run02__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_02']);
 end
 
 
@@ -115,7 +118,7 @@ for iSubj = 1 : nSubj
     
 end % iSubj
 
-
+return
 switch CLUSTER
     case 1
         par.run = 0;

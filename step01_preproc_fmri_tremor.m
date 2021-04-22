@@ -12,9 +12,9 @@ maindir = '/network/lustre/iss01/cenir/analyse/irm/users/benoit.beranger/INSIGHT
 % end
 
 par.redo= 0;
-par.run = 0;
+par.run = 1;
 par.pct = 0;
-par.sge = 1;
+par.sge = 0;
 
 
 %% Get files paths

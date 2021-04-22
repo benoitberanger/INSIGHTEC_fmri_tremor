@@ -32,6 +32,7 @@ fname_mrk = spm_file(filepath, 'ext', '.vmrk');
 for iRun = 1 : length(filepath)
     %% Get file & sequence paramters
     
+    sequence        = [];
     sequence.TR     = 1.000; % in seconds
     sequence.nSlice = 72;
     sequence.MB     = 6;     % multiband factor
@@ -63,14 +64,14 @@ for iRun = 1 : length(filepath)
     assert( nVol(iRun) <= numel(farm.sequence.get_volume_event(data)) )
     
     % Some paramters tuning
-    data.cfg.intermediate_results_overwrite = false; % don't overwrite files
-    data.cfg.intermediate_results_save      = true;  % write on disk intermediate results
-    data.cfg.intermediate_results_load      = true;  % if intermediate result file is detected, to not re-do step and load file
+    data.cfg.intermediate_results_overwrite = 0; % don't overwrite files
+    data.cfg.intermediate_results_save      = 1; % write on disk intermediate results
+    data.cfg.intermediate_results_load      = 1; % if intermediate result file is detected, to not re-do step and load file
     
     % Plot
     % ft_databrowser(data.cfg, data)
-    cfg.dataset
-    [data.label num2cell(data.hdr.orig.impedances.channels)]
+%     cfg.dataset
+%     [data.label num2cell(data.hdr.orig.impedances.channels)]
     % continue
     
     %% ------------------------------------------------------------------------
@@ -80,7 +81,15 @@ for iRun = 1 : length(filepath)
     % A lot of functions use what is called "regular expressions" (regex). It allows to recognize patterns in strings of characters
     % This a powerfull tool, which is common to almost all programing languages. Open some documentation with : doc regular-expressions
     
+    fname = farm.io.mat.get_fname(data, 'pca_clean');
+    if exist(fname, 'file')
+        fprintf('skipping : %s \n', fname)
+        continue
+    end
     data = farm_main_workflow( data, emg_channel_regex );
+    farm_export_BVA(data)
+    farm_export_mat(data,[],1)
+    continue
     
     
     %% Some plots
