@@ -35,26 +35,36 @@ TR = 1.000;
 model_list = {'mod', 'log_mod', 'dmod', 'dlog_mod'};
 
 for l = 1 : length(model_list)
-    a=e_1run.getSerie('run_nm'    ).addStim('electrophy',[     '__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_01']);
-    a=e_2run.getSerie('run_nm_001').addStim('electrophy',['run01__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_01']);
-    a=e_2run.getSerie('run_nm_001').addStim('electrophy',['run02__euclidiannorm@ACCXYZ__'  model_list{l} '.mat$'], ['acc_' model_list{l} '_02']);
+    e_1run.getSerie('run_nm'    ).addStim('electrophy',[     '__euclidiannorm@ACCXYZ_L__'  model_list{l} '.mat$'], ['acc_L_' model_list{l} '_01']);
+    e_2run.getSerie('run_nm_001').addStim('electrophy',['run01__euclidiannorm@ACCXYZ_L__'  model_list{l} '.mat$'], ['acc_L_' model_list{l} '_01']);
+    e_2run.getSerie('run_nm_001').addStim('electrophy',['run02__euclidiannorm@ACCXYZ_L__'  model_list{l} '.mat$'], ['acc_L_' model_list{l} '_02']);
+    e_1run.getSerie('run_nm'    ).addStim('electrophy',[     '__euclidiannorm@ACCXYZ_R__'  model_list{l} '.mat$'], ['acc_R_' model_list{l} '_01']);
+    e_2run.getSerie('run_nm_001').addStim('electrophy',['run01__euclidiannorm@ACCXYZ_R__'  model_list{l} '.mat$'], ['acc_R_' model_list{l} '_01']);
+    e_2run.getSerie('run_nm_001').addStim('electrophy',['run02__euclidiannorm@ACCXYZ_R__'  model_list{l} '.mat$'], ['acc_R_' model_list{l} '_02']);
 end
-
 
 model{1} = e.getSerie('run_nm').getStim('acc_.*_01').toJob(1);
 model{2} = e.getSerie('run_nm').getStim('acc_.*_02').toJob(1);
+model{1}
+model{2}
 
-fpath = model{1}{1}{1}; % pick one, to extract name
-[~,fname,~] = fileparts(fpath);
-split1 = strsplit( fname, '__' );
-name = split1{2};
-model_name = strcat(name,'__', model_list)';
 
-modeldir = e.mkdir('model',model_name);
-modeldir = cellfun(@cellstr, modeldir,'UniformOutput',0);
+%% Prepare model dir & fspm
 
-fspm = [modeldir{:}]; fspm = fspm(:);
-fspm = addsuffixtofilenames(fspm, 'SPM.mat');
+modeldir = cell(size(model{1}));
+for  subj = 1 : length(model{1})
+    for m = 1 : length(model{1}{subj})
+        [pathstr, name, ext] = fileparts( model{1}{subj}{m} );
+        split1   = strsplit( name, '__' );
+        basename = split1{1};
+        category = split1{2};
+        regtype  = split1{3};
+        mdl = fullfile(fileparts(pathstr),'model',sprintf('%s__%s',category,regtype));
+        modeldir{subj}{m,1} = mdl;
+    end
+end
+
+fspm = cellstr(char(cellstr(cellfun(@(x) char(x),modeldir, 'UniformOutput', 0))));
 
 
 %% Specify user regressors
@@ -64,7 +74,7 @@ nSubj = length(e);
 matlabbatch = cell(0); j = 0;
 for iSubj = 1 : nSubj
     
-    for m = 1 : length(model_list)
+    for m = 1 : length(modeldir{iSubj})
         
         j = j + 1;
         matlabbatch{j}.spm.stats.fmri_spec.dir = modeldir{iSubj}(m);
@@ -78,6 +88,15 @@ for iSubj = 1 : nSubj
             matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).scans = spm_select('expand',volume{iSubj}(iRun));
             O = load(onsetFile{iSubj}{iRun});
             M = load(model{iRun}{iSubj}{m});
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            O.names    {end+1} = 'ArmLifting';
+            O.onsets   {end+1} = O.onsets{3};
+            O.durations{end+1} = 3*ones(size(O.onsets{3}));
+            
+            O.names    {end+1} = 'ArmLowering';
+            O.onsets   {end+1} = O.onsets{3}+30;
+            O.durations{end+1} = 3*ones(size(O.onsets{3}));
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             for c = 1 : length(O.names)
                 matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).name     = O.names    {c};
                 matlabbatch{j}.spm.stats.fmri_spec.sess(iRun).cond(c).onset    = O.onsets   {c};
@@ -118,7 +137,7 @@ for iSubj = 1 : nSubj
     
 end % iSubj
 
-return
+
 switch CLUSTER
     case 1
         par.run = 0;
@@ -155,11 +174,13 @@ job_first_level_estimate(fspm,par);
 
 %% Contrast
 
-Instructions = [1 0 0 0   0];
-Relax        = [0 1 0 0   0];
-Posture      = [0 0 1 0   0];
-TARGET       = [0 0 0 1   0];  % <=== modulator
-EndText      = [0 0 0 0   1];
+Instructions = [1 0 0 0   0 0 0];
+Relax        = [0 1 0 0   0 0 0];
+Posture      = [0 0 1 0   0 0 0];
+TARGET       = [0 0 0 1   0 0 0];  % <=== modulator
+EndText      = [0 0 0 0   1 0 0];
+ArmLifting   = [0 0 0 0   0 1 0];
+ArmLowering  = [0 0 0 0   0 0 1];
 
 contrast_T.values = {
     
@@ -168,6 +189,8 @@ Relax
 Posture
 TARGET
 EndText
+ArmLifting
+ArmLowering
 
 Posture-Relax
 
@@ -180,6 +203,10 @@ contrast_T.names = {
 'Posture'
 'TARGET'
 'EndText'
+'ArmLifting'
+'ArmLowering'
+
+'Posture-Relax'
 
 }';
 
