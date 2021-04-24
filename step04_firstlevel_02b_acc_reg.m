@@ -64,6 +64,7 @@ for  subj = 1 : length(model{1})
 end
 
 fspm = cellstr(char(cellstr(cellfun(@(x) char(x),modeldir, 'UniformOutput', 0))));
+fspm = fullfile(fspm,'SPM.mat');
 
 
 %% Specify user regressors
