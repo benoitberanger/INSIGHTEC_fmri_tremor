@@ -163,10 +163,9 @@ Instructions = [1 0 0 0   0 0 0];
 Relax        = [0 1 0 0   0 0 0];
 Posture      = [0 0 1 0   0 0 0];
 EndText      = [0 0 0 1   0 0 0];
-TARGET       = [0 0 0 0   1 0 0];
-ArmLifting   = [0 0 0 0   0 1 0];
-ArmLowering  = [0 0 0 0   0 0 1];
-
+ArmLifting   = [0 0 0 0   1 0 0];
+ArmLowering  = [0 0 0 0   0 1 0];
+TARGET       = [0 0 0 0   0 0 1];
 
 contrast_T.values = {
     
@@ -174,10 +173,9 @@ Instructions
 Relax
 Posture
 EndText
-TARGET
 ArmLifting
 ArmLowering
-
+TARGET
 Posture-Relax
 
 }';
@@ -188,10 +186,9 @@ contrast_T.names = {
 'Relax'
 'Posture'
 'EndText'
-'TARGET'
 'ArmLifting'
 'ArmLowering'
-
+'TARGET'
 'Posture-Relax'
 
 }';
@@ -200,7 +197,7 @@ contrast_T.names = {
 contrast_T.types = cat(1,repmat({'T'},[1 length(contrast_T.names)]));
 
 contrast_F.names  = {'F-all'};
-contrast_F.values = {eye(5)};
+contrast_F.values = {eye(7)};
 contrast_F.types  = cat(1,repmat({'F'},[1 length(contrast_F.names)]));
 
 contrast.names  = [contrast_F.names  contrast_T.names ];
