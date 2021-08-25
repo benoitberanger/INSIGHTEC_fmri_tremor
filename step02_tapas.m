@@ -3,12 +3,11 @@ clc
 
 load e.mat
 
-outdir = e.getSerie('run_nm').removeEmpty.toJob(0);
-func   = e.getSerie('run_nm').removeEmpty.getVolume('^wutr(f|v)').toJob(0);
-mask   = e.getSerie('run_nm').removeEmpty.getExam.getSerie('anat_T1_UNI').getVolume('^rwp[23]').toJob(0);
+outdir = e.getSerie('run_nm').removeEmpty.getPath;
+func   = e.getSerie('run_nm').removeEmpty.getVolume('^wutr(f|v)');
+mask   = e.getSerie('run_nm').removeEmpty.getExam.getSerie('anat_T1_UNI').getVolume('^rwp[23]').squeeze();
 
-e.getSerie('run_nm').addJson('^rp.*txt$','rp',1)
-rp = e.getSerie('run_nm').removeEmpty.getJson('rp').toJob(0);
+rp = e.getSerie('run_nm').removeEmpty.getRP('rp');
 
 
 %%
